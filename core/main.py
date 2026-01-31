@@ -26,7 +26,7 @@ MODELS = {
     's2stransformer': {
         'dir': 'models/s2stransformer',
         'exe': 's2stransformer.py',
-        'custArgs': ['--gpuIdx', '0', '--alpha', '0.0001', '--saveModel', 's2s.pt'],
+        'custArgs': ['--gpuIdx', '0', '--alpha', '0.0001', '--model_path', 's2s.pt'],
     }
 }
 
