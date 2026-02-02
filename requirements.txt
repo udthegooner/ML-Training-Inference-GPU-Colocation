@@ -1,0 +1,10 @@
+# Core ML Framework (Pinned for stability)
+torch>=2.3.0,<2.4.0
+torchvision>=0.18.0,<0.19.0
+torchtext>=0.18.0,<0.19.0
+torchdata>=0.7.1,<0.8.0
+
+# Dependencies
+portalocker>=2.0.0
+spacy>=3.0.0
+numpy<2.0.0  # Numpy 2.0+ breaks many older torch/spacy versions

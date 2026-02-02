@@ -1,3 +1,7 @@
+# Ignore UserWarnings
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+
 import argparse, random, numpy as np, torch, time, math
 from typing import List
 import torch.nn as nn
@@ -165,8 +169,8 @@ def runBenchmark(mode, model, dataloader, numSteps, optimizer=None, lossFn=None)
     totalPredictions = 0
     totalTime = time.time()
     for i,(src,tgt) in enumerate(dataloader):
-        if i>=numSteps:
-            break
+        # if i>=numSteps:
+        #     break
         src, tgt = src.to(DEVICE), tgt.to(DEVICE)
         tgtInput = tgt[:-1, :]
 
@@ -177,7 +181,7 @@ def runBenchmark(mode, model, dataloader, numSteps, optimizer=None, lossFn=None)
         if mode == 'training':
             optimizer.zero_grad()
             tgtOut = tgt[1:, :]
-            loss = lossFn(logits.reshape(-1, logits.shape[-1]), tgtOut.reshape(-1))
+            loss = lossFn(logits.reshape(-1, logits.shape[-1]), tgtOut.reshape(-1).long())
             totalLoss += loss.item()
             loss.backward()
             optimizer.step()
@@ -187,8 +191,8 @@ def runBenchmark(mode, model, dataloader, numSteps, optimizer=None, lossFn=None)
             totalPredictions += (tgt[1:, :] != PAD_IDX).sum().item()
         
         if mode == 'training' and i % 50 == 0:
-            print(f'Step: {i}, Avg. {mode} loss: {totalLoss / (i + 1):.4f}')
-            totalLoss = 0.0
+            print(f'Step: {i}, {mode} loss per batch: {totalLoss / (i + 1):.4f}')
+
     totalTime = time.time() - totalTime
     print(f'Total {mode} time for {numSteps} steps: {totalTime:.2f} seconds')
     print(f'Average {mode} time per step: {totalTime/numSteps:.2f} seconds')
@@ -205,7 +209,7 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
     ys = torch.ones(1, 1).fill_(start_symbol).type(torch.long).to(DEVICE)
     for i in range(max_len-1):
         memory = memory.to(DEVICE)
-        tgt_mask = (generate_square_subsequent_mask(ys.size(0))
+        tgt_mask = (generateSquareSubsequentMask(ys.size(0))
                     .type(torch.bool)).to(DEVICE)
         out = model.decode(ys, memory, tgt_mask)
         out = out.transpose(0, 1)
@@ -247,12 +251,12 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Transformer S2S Benchmark Workload')
     parser.add_argument('--gpuIdx', type=int, default=0, help='Index of GPU to use')
-    parser.add_argument('--alpha', type=float, default=0.0001, help='Learning rate')
+    parser.add_argument('--alpha', type=float, default=0.001, help='Learning rate')
     parser.add_argument('--batch_size', type=int, default=32)
-    parser.add_argument('--num_steps', type=int, default=100)
+    parser.add_argument('--num_steps', type=int, default=100) # number of batches to process
     parser.add_argument('--job_type', choices=['training', 'inference'], required=True)
     parser.add_argument('--log_file', type=str, required=True)
-    parser.add_argument('--enable_perf_log', action='store_true')
+    parser.add_argument('--enable_perf_log', action='store_false')
     parser.add_argument('--model_path', type=str, default=None, help='Path to save model')
     args = parser.parse_args()
 
@@ -280,8 +284,7 @@ if __name__ == '__main__':
                             batch_size=args.batch_size,
                             collate_fn=lambda batch: collateFn(batch, text_transform))
     if args.enable_perf_log:
-        # TODO: check params
-        dataloader = PerformanceIterator(dataloader, args.log_file, args.job_type, modelName='s2stransformer', batchSize=args.batch_size)
+        dataloader = PerformanceIterator(dataloader, None, None, None, args.log_file)
     
     if args.job_type == 'training':
         optimizer = torch.optim.Adam(model.parameters(), lr=args.alpha, betas=(0.9, 0.98), eps=1e-9)
@@ -311,4 +314,9 @@ if __name__ == '__main__':
             print(f"Translated sentence: {translated_sentence}")
             print(f"Inference time: {inferTime:.4f} seconds")
     else:
+        if args.model_path is None:
+            print("Model path not provided")
+            exit()
+        
+        model.load_state_dict(torch.load(args.model_path))
         runBenchmark('inference', model, dataloader, args.num_steps)
