@@ -169,8 +169,8 @@ def runBenchmark(mode, model, dataloader, numSteps, optimizer=None, lossFn=None)
     totalPredictions = 0
     totalTime = time.time()
     for i,(src,tgt) in enumerate(dataloader):
-        # if i>=numSteps:
-        #     break
+        if i>=numSteps:
+            break
         src, tgt = src.to(DEVICE), tgt.to(DEVICE)
         tgtInput = tgt[:-1, :]
 
@@ -251,11 +251,11 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Transformer S2S Benchmark Workload')
     parser.add_argument('--gpuIdx', type=int, default=0, help='Index of GPU to use')
-    parser.add_argument('--alpha', type=float, default=0.001, help='Learning rate')
+    parser.add_argument('--alpha', type=float, default=0.0005, help='Learning rate')
     parser.add_argument('--batch_size', type=int, default=32)
-    parser.add_argument('--num_steps', type=int, default=100) # number of batches to process
-    parser.add_argument('--job_type', choices=['training', 'inference'], required=True)
-    parser.add_argument('--log_file', type=str, required=True)
+    parser.add_argument('--num_steps', type=int, default=64) # number of batches to process
+    parser.add_argument('--job_type', choices=['training', 'inference', 'translate'], required=True)
+    parser.add_argument('--log_file', type=str)
     parser.add_argument('--enable_perf_log', action='store_false')
     parser.add_argument('--model_path', type=str, default=None, help='Path to save model')
     args = parser.parse_args()
@@ -295,6 +295,7 @@ if __name__ == '__main__':
             torch.save(model.state_dict(), args.model_path)
             print(f"Model saved to {args.model_path}")
         
+        model.eval()
         print(translate(model, "Sie spielen Fußball."))
 
     elif args.job_type == 'translate':
