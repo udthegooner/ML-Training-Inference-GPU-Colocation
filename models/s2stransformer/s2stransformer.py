@@ -161,16 +161,19 @@ def collateFn(batch, textTransform):
     return srcBatch, tgtBatch
 
 # --- Benchmarking ---
-def runBenchmark(mode, model, dataloader, numSteps, optimizer=None, lossFn=None):
+def runBenchmark(mode, model, iterator, numSteps, optimizer=None, lossFn=None):
     model.to(DEVICE)
     model.train() if mode == 'training' else model.eval()
     totalLoss = 0.0
     correctPredictions = 0
     totalPredictions = 0
     totalTime = time.time()
-    for i,(src,tgt) in enumerate(dataloader):
-        if i>=numSteps:
+    for i in range(numSteps):
+        try:
+            src, tgt = next(iterator)
+        except StopIteration:
             break
+        
         src, tgt = src.to(DEVICE), tgt.to(DEVICE)
         tgtInput = tgt[:-1, :]
 
@@ -256,7 +259,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_steps', type=int, default=64) # number of batches to process
     parser.add_argument('--job_type', choices=['training', 'inference', 'translate'], required=True)
     parser.add_argument('--log_file', type=str)
-    parser.add_argument('--enable_perf_log', action='store_false')
+    parser.add_argument('--enable_perf_log', action='store_true')
     parser.add_argument('--model_path', type=str, default=None, help='Path to save model')
     args = parser.parse_args()
 
@@ -286,10 +289,12 @@ if __name__ == '__main__':
     if args.enable_perf_log:
         dataloader = PerformanceIterator(dataloader, None, None, None, args.log_file)
     
+    iterator = iter(dataloader)
+    
     if args.job_type == 'training':
         optimizer = torch.optim.Adam(model.parameters(), lr=args.alpha, betas=(0.9, 0.98), eps=1e-9)
         lossFn = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
-        runBenchmark('training', model, dataloader, args.num_steps, optimizer, lossFn)
+        runBenchmark('training', model, iterator, args.num_steps, optimizer, lossFn)
 
         if args.model_path:
             torch.save(model.state_dict(), args.model_path)
@@ -320,4 +325,4 @@ if __name__ == '__main__':
             exit()
         
         model.load_state_dict(torch.load(args.model_path))
-        runBenchmark('inference', model, dataloader, args.num_steps)
+        runBenchmark('inference', model, iterator, args.num_steps)
