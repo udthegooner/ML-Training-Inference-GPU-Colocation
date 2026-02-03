@@ -98,7 +98,7 @@ class Seq2SeqTransformer(nn.Module):
 # --- Masking & Pipeline Helpers ---
 
 def generateSquareSubsequentMask(sz: int) -> Tensor:
-    mask = (torch.triu(torch.ones((sz, sz))) == 1).transpose(0, 1)
+    mask = (torch.triu(torch.ones((sz, sz), device=DEVICE)) == 1).transpose(0, 1)
     mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
     return mask
 
