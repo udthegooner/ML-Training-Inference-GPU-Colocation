@@ -6,8 +6,8 @@ import os
 import torch
 import torch.nn as nn
 from tqdm import tqdm
-import data
-import model as mdl
+from models.lstm import data
+from models.lstm import model as mdl
 from core.performanceIterator import PerformanceIterator
 
 # --- Setup & Helpers ---
