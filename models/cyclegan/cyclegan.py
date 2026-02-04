@@ -74,8 +74,8 @@ def train(args, device):
 
     print(f"Starting CycleGAN Training on {device}...")
 
-    while total_steps < args.num_steps:
-        for i, batch in tqdm(enumerate(dataloader), total=len(dataloader), desc="CycleGAN Training"):
+    for epoch in range(args.n_epochs):
+        for i, batch in tqdm(enumerate(dataloader), total=len(dataloader), desc=f"CycleGAN Training Epoch {epoch+1}/{args.n_epochs}"):
             if total_steps >= args.num_steps: break
 
             real_A = Variable(batch["A"].type(Tensor).to(device))
@@ -115,6 +115,8 @@ def train(args, device):
         lr_scheduler_G.step()
         lr_scheduler_D_A.step()
         lr_scheduler_D_B.step()
+
+        if total_steps >= args.num_steps: break
     
     # Save model checkpoints
     print(f"Saving models to {checkpoint_dir}...")
@@ -169,6 +171,8 @@ if __name__ == "__main__":
     parser.add_argument("--num_steps", type=int, default=100)
     parser.add_argument("--enable_perf_log", action='store_true')
     parser.add_argument("--log_file", type=str, default="cyclegan.log")
+    parser.add_argument("--n_epochs", type=int, default=200)
+    parser.add_argument("--decay_epoch", type=int, default=100)
     args = parser.parse_args()
 
     DEVICE = torch.device(f"cuda:{args.gpuIdx}" if torch.cuda.is_available() else "cpu")
