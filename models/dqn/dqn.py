@@ -9,6 +9,7 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
 import gymnasium as gym
+import ale_py
 from stable_baselines3.common.atari_wrappers import (
     ClipRewardEnv,
     EpisodicLifeEnv,
@@ -74,8 +75,8 @@ def make_env(env_id, seed, idx, capture_video, run_name):
             env = FireResetEnv(env)
         env = ClipRewardEnv(env)
         env = gym.wrappers.ResizeObservation(env, (84, 84))
-        env = gym.wrappers.GrayScaleObservation(env)
-        env = gym.wrappers.FrameStack(env, 4)
+        env = gym.wrappers.GrayscaleObservation(env)
+        env = gym.wrappers.FrameStackObservation(env, 4)
         env.action_space.seed(seed)
         return env
     return thunk
@@ -205,7 +206,7 @@ if __name__ == "__main__":
     base_iterator = env_generator(envs, q_network, DEVICE, args.job_type, seed, epsilon_info)
 
     if args.enable_perf_log:
-        iterator = PerformanceIterator(base_iterator, None, None, None, args.log_file)
+        iterator = iter(PerformanceIterator(base_iterator, None, None, None, args.log_file))
     else:
         iterator = base_iterator
 
@@ -213,7 +214,7 @@ if __name__ == "__main__":
         target_network = QNetwork(envs).to(DEVICE)
         target_network.load_state_dict(q_network.state_dict())
         optimizer = optim.Adam(q_network.parameters(), lr=args.alpha)
-        rb = ReplayBuffer(args.buffer_size, envs.single_observation_space, envs.single_action_space, DEVICE, optimize_memory_usage=True)
+        rb = ReplayBuffer(args.buffer_size, envs.single_observation_space, envs.single_action_space, DEVICE, optimize_memory_usage=True, handle_timeout_termination=False,)
         
         runBenchmark('training', q_network, iterator, args.num_steps, target_network, rb, optimizer, args)
 
