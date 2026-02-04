@@ -206,4 +206,15 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
+# Model files
 *.pt
+*.pth
+saved_models/
+videos/
+*.log
+output/
+results/
+
+# Datasets
+data/
+!data/wikitext-2/
